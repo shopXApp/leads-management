@@ -1,43 +1,43 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Filter, Download, Upload } from 'lucide-react';
+import { Plus, Filter, Download, Upload, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Lead, LeadStatus, LeadSource } from '@/types/crm';
+
+// Extended Lead interface for offline-first functionality
+interface OfflineLead extends Lead {
+  localId?: number;
+  serverId?: string;
+}
 import { apiService } from '@/services/api';
+import { useOfflineFirst } from '@/hooks/useOfflineFirst';
+import { SyncStatusIndicator } from '@/components/ui/sync-status';
+import { CommunicationForm } from '@/components/communications/CommunicationForm';
+import { CommunicationHistory } from '@/components/communications/CommunicationHistory';
 
 const Leads = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [selectedLead, setSelectedLead] = useState<OfflineLead | null>(null);
+  const [showCommunicationDialog, setShowCommunicationDialog] = useState(false);
 
-  useEffect(() => {
-    fetchLeads();
-  }, [searchParams]);
-
-  const fetchLeads = async () => {
-    try {
-      setLoading(true);
-      const params = {
-        search: searchQuery || undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-        source: sourceFilter !== 'all' ? sourceFilter : undefined,
-      };
-      const response = await apiService.getLeads(params);
-      setLeads(response.data);
-    } catch (error) {
-      console.error('Failed to fetch leads:', error);
-    } finally {
-      setLoading(false);
+  const { data: leads, loading, syncStatus, actions } = useOfflineFirst<OfflineLead>({
+    tableName: 'leads',
+    apiMethods: {
+      getAll: (params) => apiService.getLeads(params),
+      create: (data) => apiService.createLead(data),
+      update: (id, data) => apiService.updateLead(id, data),
+      delete: (id) => apiService.deleteLead(id)
     }
-  };
+  });
 
   const getStatusBadgeVariant = (status: LeadStatus) => {
     switch (status) {
@@ -54,7 +54,10 @@ const Leads = () => {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
+        <div className="flex items-center space-x-4">
+          <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
+          <SyncStatusIndicator />
+        </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm">
             <Upload className="mr-2 h-4 w-4" />
@@ -100,9 +103,9 @@ const Leads = () => {
             ))}
           </SelectContent>
         </Select>
-        <Button variant="outline" onClick={fetchLeads}>
+        <Button variant="outline" onClick={actions.refresh}>
           <Filter className="mr-2 h-4 w-4" />
-          Filter
+          Refresh
         </Button>
       </div>
 
@@ -124,6 +127,7 @@ const Leads = () => {
                 <TableHead>Source</TableHead>
                 <TableHead>Score</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -137,7 +141,7 @@ const Leads = () => {
                 </TableRow>
               ) : (
                 leads.map((lead) => (
-                  <TableRow key={lead.id}>
+                  <TableRow key={lead.localId || lead.id}>
                     <TableCell className="font-medium">
                       {lead.firstName} {lead.lastName}
                     </TableCell>
@@ -151,6 +155,24 @@ const Leads = () => {
                     <TableCell>{lead.source}</TableCell>
                     <TableCell>{lead.score || '-'}</TableCell>
                     <TableCell>{new Date(lead.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => {
+                            setSelectedLead(lead);
+                            setShowCommunicationDialog(true);
+                          }}
+                        >
+                          <MessageCircle className="h-3 w-3 mr-1" />
+                          Log
+                        </Button>
+                        {!lead.serverId && (
+                          <Badge variant="secondary" className="text-xs">Offline</Badge>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -158,6 +180,28 @@ const Leads = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Communication Dialog */}
+      <Dialog open={showCommunicationDialog} onOpenChange={setShowCommunicationDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Communications - {selectedLead?.firstName} {selectedLead?.lastName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CommunicationForm
+              leadId={selectedLead?.localId || selectedLead?.serverId || ''}
+              onSaved={() => {
+                // Optionally refresh or update UI
+              }}
+            />
+            <CommunicationHistory
+              leadId={selectedLead?.localId || selectedLead?.id || ''}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
