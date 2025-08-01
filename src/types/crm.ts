@@ -32,7 +32,9 @@ export interface Lead {
 }
 
 export interface Contact {
-  id: string;
+  id?: string;
+  localId?: number;
+  serverId?: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -41,12 +43,14 @@ export interface Contact {
   companyId?: string;
   company?: Company;
   customFields?: CustomFieldValue[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Company {
-  id: string;
+  id?: string;
+  localId?: number;
+  serverId?: string;
   name: string;
   website?: string;
   industry?: string;
@@ -56,29 +60,35 @@ export interface Company {
   contacts?: Contact[];
   leads?: Lead[];
   opportunities?: Opportunity[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Opportunity {
-  id: string;
+  id?: string;
+  localId?: number;
+  serverId?: string;
   title: string;
   description?: string;
-  value: number;
+  amount?: number;
+  value?: number;
   stage: OpportunityStage;
-  probability: number;
+  probability?: number;
+  closeDate?: string;
   expectedCloseDate?: string;
   actualCloseDate?: string;
   leadId?: string;
   lead?: Lead;
+  contactId?: string;
+  contact?: Contact;
   companyId?: string;
   company?: Company;
   assignedToId?: string;
   assignedTo?: User;
   customFields?: CustomFieldValue[];
   activities?: Activity[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Activity {
@@ -211,11 +221,15 @@ export enum LeadSource {
 }
 
 export enum OpportunityStage {
+  Lead = 'Lead',
+  Qualified = 'Qualified',
+  Proposal = 'Proposal',
+  Negotiation = 'Negotiation',
+  Won = 'Won',
+  Lost = 'Lost',
   Prospecting = 'Prospecting',
   Qualification = 'Qualification',
   NeedsAnalysis = 'NeedsAnalysis',
-  Proposal = 'Proposal',
-  Negotiation = 'Negotiation',
   ClosedWon = 'ClosedWon',
   ClosedLost = 'ClosedLost'
 }

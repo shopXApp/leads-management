@@ -1,42 +1,47 @@
-import { useState, useEffect } from 'react';
-import { Plus, DollarSign, Calendar, TrendingUp } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Search, Filter, RefreshCw, Target, Calendar, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Opportunity, OpportunityStage } from '@/types/crm';
 import { apiService } from '@/services/api';
+import { useOfflineFirst } from '@/hooks/useOfflineFirst';
+import SyncStatus from '@/components/ui/sync-status';
 
 const Opportunities = () => {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchOpportunities();
-  }, []);
-
-  const fetchOpportunities = async () => {
-    try {
-      setLoading(true);
-      const response = await apiService.getOpportunities();
-      setOpportunities(response.data);
-    } catch (error) {
-      console.error('Failed to fetch opportunities:', error);
-    } finally {
-      setLoading(false);
+  const { 
+    data: opportunities, 
+    loading, 
+    syncStatus, 
+    error,
+    actions 
+  } = useOfflineFirst<Opportunity>({
+    tableName: 'opportunities',
+    apiMethods: {
+      getAll: (params) => apiService.getOpportunities(params),
+      create: (data) => apiService.createOpportunity(data),
+      update: (id, data) => apiService.updateOpportunity(id, data),
+      delete: (id) => apiService.deleteOpportunity(id)
     }
+  });
+
+  const handleSearch = () => {
+    actions.refresh();
   };
 
   const getStageBadgeVariant = (stage: OpportunityStage) => {
     switch (stage) {
-      case OpportunityStage.Prospecting: return 'secondary';
-      case OpportunityStage.Qualification: return 'outline';
-      case OpportunityStage.NeedsAnalysis: return 'secondary';
+      case OpportunityStage.Lead: return 'secondary';
+      case OpportunityStage.Qualified: return 'outline';
       case OpportunityStage.Proposal: return 'default';
       case OpportunityStage.Negotiation: return 'secondary';
-      case OpportunityStage.ClosedWon: return 'default';
-      case OpportunityStage.ClosedLost: return 'destructive';
+      case OpportunityStage.Won: return 'default';
+      case OpportunityStage.Lost: return 'destructive';
       default: return 'outline';
     }
   };
@@ -45,20 +50,36 @@ const Opportunities = () => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
-  const totalValue = opportunities.reduce((sum, opp) => sum + opp.value, 0);
-  const avgProbability = opportunities.length > 0 
-    ? opportunities.reduce((sum, opp) => sum + opp.probability, 0) / opportunities.length 
-    : 0;
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
+  };
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Opportunities</h2>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Opportunities</h2>
+          <SyncStatus showDetails={false} />
+        </div>
         <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={actions.refresh}
+            disabled={loading || !syncStatus.isOnline}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
           <Button size="sm">
             <Plus className="mr-2 h-4 w-4" />
             Add Opportunity
@@ -66,67 +87,75 @@ const Opportunities = () => {
         </div>
       </div>
 
+      {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pipeline Value</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Opportunities</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{opportunities.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pipeline Value</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
-            <p className="text-xs text-muted-foreground">
-              Across {opportunities.length} opportunities
-            </p>
+            <div className="text-2xl font-bold">
+              {formatCurrency(opportunities.reduce((sum, opp) => sum + (opp.amount || 0), 0))}
+            </div>
           </CardContent>
         </Card>
-        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Probability</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgProbability.toFixed(1)}%</div>
-            <Progress value={avgProbability} className="mt-2" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Deals</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Open Deals</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {opportunities.filter(o => !o.stage.includes('Closed')).length}
+              {opportunities.filter(opp => 
+                opp.stage !== OpportunityStage.Won && opp.stage !== OpportunityStage.Lost
+              ).length}
             </div>
-            <p className="text-xs text-muted-foreground">
-              In progress
-            </p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Closed Won</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Won Deals</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {opportunities.filter(o => o.stage === OpportunityStage.ClosedWon).length}
+              {opportunities.filter(opp => opp.stage === OpportunityStage.Won).length}
             </div>
-            <p className="text-xs text-muted-foreground">
-              This period
-            </p>
           </CardContent>
         </Card>
       </div>
 
+      <div className="flex items-center space-x-2">
+        <div className="relative">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search opportunities..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 max-w-sm"
+          />
+        </div>
+        <Button variant="outline" onClick={handleSearch}>
+          <Filter className="mr-2 h-4 w-4" />
+          Search
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Pipeline Overview</CardTitle>
+          <CardTitle>All Opportunities</CardTitle>
           <CardDescription>
-            Track your sales opportunities
+            Manage your sales pipeline
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -134,12 +163,12 @@ const Opportunities = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Opportunity</TableHead>
+                <TableHead>Contact</TableHead>
                 <TableHead>Company</TableHead>
-                <TableHead>Value</TableHead>
+                <TableHead>Amount</TableHead>
                 <TableHead>Stage</TableHead>
-                <TableHead>Probability</TableHead>
-                <TableHead>Expected Close</TableHead>
-                <TableHead>Owner</TableHead>
+                <TableHead>Close Date</TableHead>
+                <TableHead>Created</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -153,20 +182,35 @@ const Opportunities = () => {
                 </TableRow>
               ) : (
                 opportunities.map((opportunity) => (
-                  <TableRow key={opportunity.id}>
-                    <TableCell className="font-medium">
+                  <TableRow key={opportunity.localId || opportunity.id}>
+                    <TableCell>
                       <div>
                         <div className="font-medium">{opportunity.title}</div>
-                        {opportunity.description && (
-                          <div className="text-sm text-muted-foreground truncate max-w-xs">
-                            {opportunity.description}
-                          </div>
+                        <div className="text-sm text-muted-foreground">
+                          {opportunity.description}
+                        </div>
+                        {!opportunity.serverId && (
+                          <div className="text-xs text-muted-foreground">Local only</div>
                         )}
                       </div>
                     </TableCell>
+                    <TableCell>
+                      {opportunity.contact ? (
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {getInitials(opportunity.contact.firstName, opportunity.contact.lastName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">
+                            {opportunity.contact.firstName} {opportunity.contact.lastName}
+                          </span>
+                        </div>
+                      ) : '-'}
+                    </TableCell>
                     <TableCell>{opportunity.company?.name || '-'}</TableCell>
                     <TableCell className="font-medium">
-                      {formatCurrency(opportunity.value)}
+                      {opportunity.amount ? formatCurrency(opportunity.amount) : '-'}
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStageBadgeVariant(opportunity.stage)}>
@@ -174,22 +218,15 @@ const Opportunities = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Progress value={opportunity.probability} className="w-16" />
-                        <span className="text-sm">{opportunity.probability}%</span>
-                      </div>
+                      {opportunity.closeDate ? (
+                        <div className="flex items-center text-sm">
+                          <Calendar className="mr-1 h-3 w-3" />
+                          {formatDate(opportunity.closeDate)}
+                        </div>
+                      ) : '-'}
                     </TableCell>
                     <TableCell>
-                      {opportunity.expectedCloseDate 
-                        ? new Date(opportunity.expectedCloseDate).toLocaleDateString()
-                        : '-'
-                      }
-                    </TableCell>
-                    <TableCell>
-                      {opportunity.assignedTo 
-                        ? `${opportunity.assignedTo.firstName} ${opportunity.assignedTo.lastName}`
-                        : '-'
-                      }
+                      {opportunity.createdAt ? formatDate(opportunity.createdAt) : '-'}
                     </TableCell>
                   </TableRow>
                 ))

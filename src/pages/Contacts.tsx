@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Search, Filter } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Search, Filter, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,29 +7,32 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Contact } from '@/types/crm';
 import { apiService } from '@/services/api';
+import { useOfflineFirst } from '@/hooks/useOfflineFirst';
+import SyncStatus from '@/components/ui/sync-status';
 
 const Contacts = () => {
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchContacts();
-  }, []);
-
-  const fetchContacts = async () => {
-    try {
-      setLoading(true);
-      const params = {
-        search: searchQuery || undefined,
-      };
-      const response = await apiService.getContacts(params);
-      setContacts(response.data);
-    } catch (error) {
-      console.error('Failed to fetch contacts:', error);
-    } finally {
-      setLoading(false);
+  const { 
+    data: contacts, 
+    loading, 
+    syncStatus, 
+    error,
+    actions 
+  } = useOfflineFirst<Contact>({
+    tableName: 'contacts',
+    apiMethods: {
+      getAll: (params) => apiService.getContacts(params),
+      create: (data) => apiService.createContact(data),
+      update: (id, data) => apiService.updateContact(id, data),
+      delete: (id) => apiService.deleteContact(id)
     }
+  });
+
+  const handleSearch = () => {
+    // In a more advanced implementation, you could filter locally first
+    // then sync with search parameters
+    actions.refresh();
   };
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -39,8 +42,20 @@ const Contacts = () => {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Contacts</h2>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Contacts</h2>
+          <SyncStatus showDetails={false} />
+        </div>
         <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={actions.refresh}
+            disabled={loading || !syncStatus.isOnline}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
           <Button size="sm">
             <Plus className="mr-2 h-4 w-4" />
             Add Contact
@@ -58,7 +73,7 @@ const Contacts = () => {
             className="pl-8 max-w-sm"
           />
         </div>
-        <Button variant="outline" onClick={fetchContacts}>
+        <Button variant="outline" onClick={handleSearch}>
           <Filter className="mr-2 h-4 w-4" />
           Search
         </Button>
@@ -94,25 +109,28 @@ const Contacts = () => {
                 </TableRow>
               ) : (
                 contacts.map((contact) => (
-                  <TableRow key={contact.id}>
-                    <TableCell className="flex items-center space-x-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {getInitials(contact.firstName, contact.lastName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">
-                          {contact.firstName} {contact.lastName}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{contact.email}</TableCell>
-                    <TableCell>{contact.phone || '-'}</TableCell>
-                    <TableCell>{contact.jobTitle || '-'}</TableCell>
-                    <TableCell>{contact.company?.name || '-'}</TableCell>
-                    <TableCell>{new Date(contact.createdAt).toLocaleDateString()}</TableCell>
-                  </TableRow>
+                   <TableRow key={contact.localId || contact.id}>
+                     <TableCell className="flex items-center space-x-3">
+                       <Avatar className="h-8 w-8">
+                         <AvatarFallback>
+                           {getInitials(contact.firstName, contact.lastName)}
+                         </AvatarFallback>
+                       </Avatar>
+                       <div>
+                         <div className="font-medium">
+                           {contact.firstName} {contact.lastName}
+                         </div>
+                         {!contact.serverId && (
+                           <div className="text-xs text-muted-foreground">Local only</div>
+                         )}
+                       </div>
+                     </TableCell>
+                     <TableCell>{contact.email}</TableCell>
+                     <TableCell>{contact.phone || '-'}</TableCell>
+                     <TableCell>{contact.jobTitle || '-'}</TableCell>
+                     <TableCell>{contact.company?.name || '-'}</TableCell>
+                     <TableCell>{contact.createdAt ? new Date(contact.createdAt).toLocaleDateString() : '-'}</TableCell>
+                   </TableRow>
                 ))
               )}
             </TableBody>
