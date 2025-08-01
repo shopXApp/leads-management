@@ -20,6 +20,8 @@ import { useOfflineFirst } from '@/hooks/useOfflineFirst';
 import { SyncStatusIndicator } from '@/components/ui/sync-status';
 import { CommunicationForm } from '@/components/communications/CommunicationForm';
 import { CommunicationHistory } from '@/components/communications/CommunicationHistory';
+import { AddLeadDialog } from '@/components/forms/AddLeadDialog';
+import { toast } from '@/components/ui/use-toast';
 
 const Leads = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -67,10 +69,7 @@ const Leads = () => {
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Lead
-          </Button>
+          <AddLeadDialog onAdd={actions.create} />
         </div>
       </div>
 
