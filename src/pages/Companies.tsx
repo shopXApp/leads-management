@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Building2, RefreshCw, Filter } from 'lucide-react';
+import { Plus, Search, Building2, RefreshCw, Filter, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,9 +9,15 @@ import { Company, CompanySize } from '@/types/crm';
 import { apiService } from '@/services/api';
 import { useOfflineFirst } from '@/hooks/useOfflineFirst';
 import SyncStatus from '@/components/ui/sync-status';
+import { AddCompanyDialog } from '@/components/forms/AddCompanyDialog';
+import { EditCompanyDialog } from '@/components/forms/EditCompanyDialog';
+import { useToast } from '@/hooks/use-toast';
 
 const Companies = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const { 
     data: companies, 
@@ -53,6 +59,61 @@ const Companies = () => {
     return `$${revenue}`;
   };
 
+  const handleAddCompany = async (data: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      await actions.create(data);
+      toast({
+        title: "Success",
+        description: "Company added successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add company",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditCompany = (company: Company) => {
+    setEditingCompany(company);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveCompany = async (data: Partial<Company>) => {
+    try {
+      await actions.update((data.localId || data.id!) as number, data);
+      toast({
+        title: "Success",
+        description: "Company updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update company",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteCompany = async (company: Company) => {
+    if (confirm(`Are you sure you want to delete ${company.name}?`)) {
+      try {
+        await actions.delete((company.localId || company.id!) as number);
+        toast({
+          title: "Success",
+          description: "Company deleted successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete company",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
@@ -70,10 +131,7 @@ const Companies = () => {
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Company
-          </Button>
+          <AddCompanyDialog onAdd={handleAddCompany} />
         </div>
       </div>
 
@@ -111,16 +169,17 @@ const Companies = () => {
                 <TableHead>Contacts</TableHead>
                 <TableHead>Leads</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={8} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : companies.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">No companies found</TableCell>
+                  <TableCell colSpan={8} className="text-center">No companies found</TableCell>
                 </TableRow>
               ) : (
                  companies.map((company) => (
@@ -152,9 +211,27 @@ const Companies = () => {
                      <TableCell>
                        {company.revenue ? formatRevenue(company.revenue) : '-'}
                      </TableCell>
-                     <TableCell>{company.contacts?.length || 0}</TableCell>
-                     <TableCell>{company.leads?.length || 0}</TableCell>
-                     <TableCell>{company.createdAt ? new Date(company.createdAt).toLocaleDateString() : '-'}</TableCell>
+                      <TableCell>{company.contacts?.length || 0}</TableCell>
+                      <TableCell>{company.leads?.length || 0}</TableCell>
+                      <TableCell>{company.createdAt ? new Date(company.createdAt).toLocaleDateString() : '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditCompany(company)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteCompany(company)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                    </TableRow>
                  ))
               )}
@@ -162,6 +239,13 @@ const Companies = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <EditCompanyDialog
+        company={editingCompany}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSave={handleSaveCompany}
+      />
     </div>
   );
 };

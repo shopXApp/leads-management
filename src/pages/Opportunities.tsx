@@ -13,6 +13,9 @@ import SyncStatus from '@/components/ui/sync-status';
 
 const Opportunities = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const { 
     data: opportunities, 
@@ -27,6 +30,26 @@ const Opportunities = () => {
       create: (data) => apiService.createOpportunity(data),
       update: (id, data) => apiService.updateOpportunity(id, data),
       delete: (id) => apiService.deleteOpportunity(id)
+    }
+  });
+
+  const { data: contacts } = useOfflineFirst<Contact>({
+    tableName: 'contacts',
+    apiMethods: {
+      getAll: (params) => apiService.getContacts(params),
+      create: (data) => apiService.createContact(data),
+      update: (id, data) => apiService.updateContact(id, data),
+      delete: (id) => apiService.deleteContact(id)
+    }
+  });
+
+  const { data: companies } = useOfflineFirst<Company>({
+    tableName: 'companies',
+    apiMethods: {
+      getAll: (params) => apiService.getCompanies(params),
+      create: (data) => apiService.createCompany(data),
+      update: (id, data) => apiService.updateCompany(id, data),
+      delete: (id) => apiService.deleteCompany(id)
     }
   });
 
@@ -80,10 +103,11 @@ const Opportunities = () => {
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Opportunity
-          </Button>
+          <AddOpportunityDialog 
+            onAdd={async (data) => await actions.create(data)} 
+            contacts={contacts.map(c => ({ id: (c.id || c.localId!.toString()), firstName: c.firstName, lastName: c.lastName }))}
+            companies={companies.map(c => ({ id: (c.id || c.localId!.toString()), name: c.name }))}
+          />
         </div>
       </div>
 
@@ -235,6 +259,15 @@ const Opportunities = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <EditOpportunityDialog
+        opportunity={editingOpportunity}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSave={async (data) => await actions.update((data.localId || data.id!) as number, data)}
+        contacts={contacts.map(c => ({ id: (c.id || c.localId!.toString()), firstName: c.firstName, lastName: c.lastName }))}
+        companies={companies.map(c => ({ id: (c.id || c.localId!.toString()), name: c.name }))}
+      />
     </div>
   );
 };
