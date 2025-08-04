@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, RefreshCw, Target, Calendar, DollarSign } from 'lucide-react';
+import { Plus, Search, Filter, RefreshCw, Target, Calendar, DollarSign, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -89,6 +89,40 @@ const Opportunities = () => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
   };
 
+  const handleAddOpportunity = async (data: Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      await actions.create(data);
+      toast({
+        title: "Success",
+        description: "Opportunity added successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add opportunity",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveOpportunity = async (data: Partial<Opportunity>) => {
+    try {
+      await actions.update((data.localId || data.id!) as number, data);
+      setEditDialogOpen(false);
+      setEditingOpportunity(null);
+      toast({
+        title: "Success",
+        description: "Opportunity updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update opportunity",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
@@ -107,7 +141,7 @@ const Opportunities = () => {
             Refresh
           </Button>
           <AddOpportunityDialog 
-            onAdd={async (data) => await actions.create(data)} 
+            onAdd={handleAddOpportunity} 
             contacts={contacts.map(c => ({ id: (c.id || c.localId!.toString()), firstName: c.firstName, lastName: c.lastName }))}
             companies={companies.map(c => ({ id: (c.id || c.localId!.toString()), name: c.name }))}
           />
@@ -196,16 +230,17 @@ const Opportunities = () => {
                 <TableHead>Stage</TableHead>
                 <TableHead>Close Date</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={8} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : opportunities.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">No opportunities found</TableCell>
+                  <TableCell colSpan={8} className="text-center">No opportunities found</TableCell>
                 </TableRow>
               ) : (
                 opportunities.map((opportunity) => (
@@ -255,6 +290,43 @@ const Opportunities = () => {
                     <TableCell>
                       {opportunity.createdAt ? formatDate(opportunity.createdAt) : '-'}
                     </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingOpportunity(opportunity);
+                            setEditDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            if (confirm('Are you sure you want to delete this opportunity?')) {
+                              try {
+                                await actions.delete((opportunity.localId || opportunity.id!) as number);
+                                toast({
+                                  title: "Success",
+                                  description: "Opportunity deleted successfully",
+                                });
+                              } catch (error) {
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to delete opportunity",
+                                  variant: "destructive",
+                                });
+                              }
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -267,7 +339,7 @@ const Opportunities = () => {
         opportunity={editingOpportunity}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
-        onSave={async (data) => await actions.update((data.localId || data.id!) as number, data)}
+        onSave={handleSaveOpportunity}
         contacts={contacts.map(c => ({ id: (c.id || c.localId!.toString()), firstName: c.firstName, lastName: c.lastName }))}
         companies={companies.map(c => ({ id: (c.id || c.localId!.toString()), name: c.name }))}
       />
