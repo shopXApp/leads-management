@@ -13,7 +13,7 @@ import {
   CustomField
 } from '@/types/crm';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7000/api/v1';
 
 class ApiService {
   private baseUrl: string;

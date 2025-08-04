@@ -6,7 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Opportunity, OpportunityStage } from '@/types/crm';
+import { Opportunity, OpportunityStage, Contact, Company } from '@/types/crm';
+import { useToast } from '@/hooks/use-toast';
+import { AddOpportunityDialog } from '@/components/forms/AddOpportunityDialog';
+import { EditOpportunityDialog } from '@/components/forms/EditOpportunityDialog';
 import { apiService } from '@/services/api';
 import { useOfflineFirst } from '@/hooks/useOfflineFirst';
 import SyncStatus from '@/components/ui/sync-status';
