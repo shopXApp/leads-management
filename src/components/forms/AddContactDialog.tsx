@@ -10,9 +10,10 @@ import { Contact } from "@/types/crm";
 interface AddContactDialogProps {
   onAdd: (data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   companies: Array<{ id: string; name: string; }>;
+  children?: React.ReactNode;
 }
 
-export function AddContactDialog({ onAdd, companies }: AddContactDialogProps) {
+export function AddContactDialog({ onAdd, companies, children }: AddContactDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -53,10 +54,12 @@ export function AddContactDialog({ onAdd, companies }: AddContactDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Contact
-        </Button>
+        {children || (
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contact
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

@@ -10,7 +10,10 @@ import {
   Menu,
   Sun,
   Moon,
-  ChevronDown
+  ChevronDown,
+  Building,
+  Users,
+  Target
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +33,12 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { AddLeadDialog } from '@/components/forms/AddLeadDialog';
+import { AddContactDialog } from '@/components/forms/AddContactDialog';
+import { AddCompanyDialog } from '@/components/forms/AddCompanyDialog';
+import { AddOpportunityDialog } from '@/components/forms/AddOpportunityDialog';
+import { useOfflineFirst } from '@/hooks/useOfflineFirst';
+import { apiService } from '@/services/api';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -64,10 +73,10 @@ const notifications = [
 ];
 
 const quickActions = [
-  { label: 'New Lead', icon: User, action: '/leads/new' },
-  { label: 'New Contact', icon: User, action: '/contacts/new' },
-  { label: 'New Company', icon: User, action: '/companies/new' },
-  { label: 'New Opportunity', icon: User, action: '/opportunities/new' }
+  { label: 'New Lead', icon: User, key: 'lead' },
+  { label: 'New Contact', icon: Users, key: 'contact' },
+  { label: 'New Company', icon: Building, key: 'company' },
+  { label: 'New Opportunity', icon: Target, key: 'opportunity' }
 ];
 
 export function Header({ onMenuToggle, className }: HeaderProps) {
@@ -75,6 +84,47 @@ export function Header({ onMenuToggle, className }: HeaderProps) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Data hooks for global add functionality
+  const leads = useOfflineFirst({
+    tableName: 'leads',
+    apiMethods: {
+      getAll: () => apiService.getLeads(),
+      create: apiService.createLead.bind(apiService),
+      update: apiService.updateLead.bind(apiService),
+      delete: apiService.deleteLead.bind(apiService)
+    }
+  });
+  
+  const contacts = useOfflineFirst({
+    tableName: 'contacts',
+    apiMethods: {
+      getAll: () => apiService.getContacts(),
+      create: apiService.createContact.bind(apiService),
+      update: apiService.updateContact.bind(apiService),
+      delete: apiService.deleteContact.bind(apiService)
+    }
+  });
+  
+  const companies = useOfflineFirst({
+    tableName: 'companies',
+    apiMethods: {
+      getAll: () => apiService.getCompanies(),
+      create: apiService.createCompany.bind(apiService),
+      update: apiService.updateCompany.bind(apiService),
+      delete: apiService.deleteCompany.bind(apiService)
+    }
+  });
+  
+  const opportunities = useOfflineFirst({
+    tableName: 'opportunities',
+    apiMethods: {
+      getAll: () => apiService.getOpportunities(),
+      create: apiService.createOpportunity.bind(apiService),
+      update: apiService.updateOpportunity.bind(apiService),
+      delete: apiService.deleteOpportunity.bind(apiService)
+    }
+  });
 
   // Mock user data - would come from auth context in real app
   const user = {
@@ -142,21 +192,70 @@ export function Header({ onMenuToggle, className }: HeaderProps) {
           </PopoverTrigger>
           <PopoverContent className="w-48 p-2" align="end">
             <div className="space-y-1">
-              {quickActions.map((action) => (
+              <AddLeadDialog onAdd={leads.actions.create}>
                 <Button
-                  key={action.label}
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start"
-                  onClick={() => {
-                    navigate(action.action);
-                    setIsQuickActionsOpen(false);
-                  }}
+                  onClick={() => setIsQuickActionsOpen(false)}
                 >
-                  <action.icon className="h-4 w-4 mr-2" />
-                  {action.label}
+                  <User className="h-4 w-4 mr-2" />
+                  New Lead
                 </Button>
-              ))}
+              </AddLeadDialog>
+              
+              <AddContactDialog 
+                onAdd={contacts.actions.create}
+                companies={companies.data?.map(c => ({ 
+                  id: c.id || c.serverId || '', 
+                  name: (c as any).name 
+                })).filter(c => c.id && c.name) || []}
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => setIsQuickActionsOpen(false)}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  New Contact
+                </Button>
+              </AddContactDialog>
+
+              <AddCompanyDialog onAdd={companies.actions.create}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => setIsQuickActionsOpen(false)}
+                >
+                  <Building className="h-4 w-4 mr-2" />
+                  New Company
+                </Button>
+              </AddCompanyDialog>
+
+              <AddOpportunityDialog
+                onAdd={opportunities.actions.create}
+                contacts={contacts.data?.filter(c => (c as any).firstName && (c as any).lastName).map(c => ({ 
+                  id: c.id || c.serverId || '', 
+                  firstName: (c as any).firstName, 
+                  lastName: (c as any).lastName 
+                })) || []}
+                companies={companies.data?.filter(c => (c as any).name).map(c => ({ 
+                  id: c.id || c.serverId || '', 
+                  name: (c as any).name 
+                })) || []}
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => setIsQuickActionsOpen(false)}
+                >
+                  <Target className="h-4 w-4 mr-2" />
+                  New Opportunity
+                </Button>
+              </AddOpportunityDialog>
             </div>
           </PopoverContent>
         </Popover>
