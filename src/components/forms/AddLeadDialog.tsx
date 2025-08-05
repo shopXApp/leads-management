@@ -12,9 +12,10 @@ import { toast } from '@/components/ui/use-toast';
 interface AddLeadDialogProps {
   onAdd: (data: any) => Promise<void>;
   children?: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddLeadDialog({ onAdd, children }: AddLeadDialogProps) {
+export function AddLeadDialog({ onAdd, children, onOpenChange }: AddLeadDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -55,7 +56,13 @@ export function AddLeadDialog({ onAdd, children }: AddLeadDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        setOpen(newOpen);
+        onOpenChange?.(newOpen);
+      }}
+    >
       <DialogTrigger asChild>
         {children || (
           <Button size="sm">

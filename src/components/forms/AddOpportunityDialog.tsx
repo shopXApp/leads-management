@@ -13,9 +13,10 @@ interface AddOpportunityDialogProps {
   contacts: Array<{ id: string; firstName: string; lastName: string; }>;
   companies: Array<{ id: string; name: string; }>;
   children?: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddOpportunityDialog({ onAdd, contacts, companies, children }: AddOpportunityDialogProps) {
+export function AddOpportunityDialog({ onAdd, contacts, companies, children, onOpenChange }: AddOpportunityDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -64,7 +65,13 @@ export function AddOpportunityDialog({ onAdd, contacts, companies, children }: A
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        setOpen(newOpen);
+        onOpenChange?.(newOpen);
+      }}
+    >
       <DialogTrigger asChild>
         {children || (
           <Button>

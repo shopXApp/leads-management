@@ -11,9 +11,10 @@ import { Company, CompanySize } from "@/types/crm";
 interface AddCompanyDialogProps {
   onAdd: (data: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   children?: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddCompanyDialog({ onAdd, children }: AddCompanyDialogProps) {
+export function AddCompanyDialog({ onAdd, children, onOpenChange }: AddCompanyDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -53,7 +54,13 @@ export function AddCompanyDialog({ onAdd, children }: AddCompanyDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        setOpen(newOpen);
+        onOpenChange?.(newOpen);
+      }}
+    >
       <DialogTrigger asChild>
         {children || (
           <Button>

@@ -192,12 +192,14 @@ export function Header({ onMenuToggle, className }: HeaderProps) {
           </PopoverTrigger>
           <PopoverContent className="w-48 p-2" align="end">
             <div className="space-y-1">
-              <AddLeadDialog onAdd={leads.actions.create}>
+              <AddLeadDialog 
+                onAdd={leads.actions.create}
+                onOpenChange={(open) => open && setIsQuickActionsOpen(false)}
+              >
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start"
-                  onClick={() => setIsQuickActionsOpen(false)}
                 >
                   <User className="h-4 w-4 mr-2" />
                   New Lead
@@ -210,24 +212,26 @@ export function Header({ onMenuToggle, className }: HeaderProps) {
                   id: c.id || c.serverId || '', 
                   name: (c as any).name 
                 })).filter(c => c.id && c.name) || []}
+                onOpenChange={(open) => open && setIsQuickActionsOpen(false)}
               >
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start"
-                  onClick={() => setIsQuickActionsOpen(false)}
                 >
                   <Users className="h-4 w-4 mr-2" />
                   New Contact
                 </Button>
               </AddContactDialog>
 
-              <AddCompanyDialog onAdd={companies.actions.create}>
+              <AddCompanyDialog 
+                onAdd={companies.actions.create}
+                onOpenChange={(open) => open && setIsQuickActionsOpen(false)}
+              >
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start"
-                  onClick={() => setIsQuickActionsOpen(false)}
                 >
                   <Building className="h-4 w-4 mr-2" />
                   New Company
@@ -245,12 +249,12 @@ export function Header({ onMenuToggle, className }: HeaderProps) {
                   id: c.id || c.serverId || '', 
                   name: (c as any).name 
                 })) || []}
+                onOpenChange={(open) => open && setIsQuickActionsOpen(false)}
               >
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start"
-                  onClick={() => setIsQuickActionsOpen(false)}
                 >
                   <Target className="h-4 w-4 mr-2" />
                   New Opportunity

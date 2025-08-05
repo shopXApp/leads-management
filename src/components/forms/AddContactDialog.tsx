@@ -11,9 +11,10 @@ interface AddContactDialogProps {
   onAdd: (data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   companies: Array<{ id: string; name: string; }>;
   children?: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddContactDialog({ onAdd, companies, children }: AddContactDialogProps) {
+export function AddContactDialog({ onAdd, companies, children, onOpenChange }: AddContactDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -52,7 +53,13 @@ export function AddContactDialog({ onAdd, companies, children }: AddContactDialo
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        setOpen(newOpen);
+        onOpenChange?.(newOpen);
+      }}
+    >
       <DialogTrigger asChild>
         {children || (
           <Button>
