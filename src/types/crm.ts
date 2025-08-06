@@ -21,6 +21,9 @@ export interface Lead {
   status: LeadStatus;
   source: LeadSource;
   score?: number;
+  address?: string;
+  website?: string;
+  description?: string;
   assignedToId?: string;
   assignedTo?: User;
   companyId?: string;

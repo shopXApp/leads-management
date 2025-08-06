@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Plus, Filter, Download, Upload, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -142,7 +142,12 @@ const Leads = () => {
                 leads.map((lead) => (
                   <TableRow key={lead.localId || lead.id}>
                     <TableCell className="font-medium">
-                      {lead.firstName} {lead.lastName}
+                      <Link 
+                        to={`/leads/${lead.localId || lead.id}`}
+                        className="text-primary hover:underline"
+                      >
+                        {lead.firstName} {lead.lastName}
+                      </Link>
                     </TableCell>
                     <TableCell>{lead.email}</TableCell>
                     <TableCell>{lead.company || '-'}</TableCell>
