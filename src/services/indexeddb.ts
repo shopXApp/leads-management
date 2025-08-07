@@ -99,6 +99,60 @@ class IndexedDBService {
           syncStore.createIndex('tableName', 'tableName', { unique: false });
           syncStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
+
+        // Email Accounts store
+        if (!db.objectStoreNames.contains('emailAccounts')) {
+          const emailAccountsStore = db.createObjectStore('emailAccounts', { keyPath: 'localId', autoIncrement: true });
+          emailAccountsStore.createIndex('provider', 'provider', { unique: false });
+          emailAccountsStore.createIndex('email', 'email', { unique: false });
+          emailAccountsStore.createIndex('isActive', 'isActive', { unique: false });
+          emailAccountsStore.createIndex('serverId', 'serverId', { unique: true });
+        }
+
+        // Email Templates store
+        if (!db.objectStoreNames.contains('emailTemplates')) {
+          const emailTemplatesStore = db.createObjectStore('emailTemplates', { keyPath: 'localId', autoIncrement: true });
+          emailTemplatesStore.createIndex('name', 'name', { unique: false });
+          emailTemplatesStore.createIndex('category', 'category', { unique: false });
+          emailTemplatesStore.createIndex('isActive', 'isActive', { unique: false });
+          emailTemplatesStore.createIndex('serverId', 'serverId', { unique: true });
+        }
+
+        // Email Queue store
+        if (!db.objectStoreNames.contains('emailQueue')) {
+          const emailQueueStore = db.createObjectStore('emailQueue', { keyPath: 'localId', autoIncrement: true });
+          emailQueueStore.createIndex('status', 'status', { unique: false });
+          emailQueueStore.createIndex('priority', 'priority', { unique: false });
+          emailQueueStore.createIndex('scheduledSendTime', 'scheduledSendTime', { unique: false });
+          emailQueueStore.createIndex('fromEmailAccountId', 'fromEmailAccountId', { unique: false });
+          emailQueueStore.createIndex('leadId', 'leadId', { unique: false });
+          emailQueueStore.createIndex('contactId', 'contactId', { unique: false });
+          emailQueueStore.createIndex('serverId', 'serverId', { unique: true });
+        }
+
+        // Calendar Events store
+        if (!db.objectStoreNames.contains('calendarEvents')) {
+          const calendarEventsStore = db.createObjectStore('calendarEvents', { keyPath: 'localId', autoIncrement: true });
+          calendarEventsStore.createIndex('startTime', 'startTime', { unique: false });
+          calendarEventsStore.createIndex('endTime', 'endTime', { unique: false });
+          calendarEventsStore.createIndex('status', 'status', { unique: false });
+          calendarEventsStore.createIndex('emailAccountId', 'emailAccountId', { unique: false });
+          calendarEventsStore.createIndex('leadId', 'leadId', { unique: false });
+          calendarEventsStore.createIndex('contactId', 'contactId', { unique: false });
+          calendarEventsStore.createIndex('serverId', 'serverId', { unique: true });
+        }
+
+        // Email Sent History store
+        if (!db.objectStoreNames.contains('emailSentHistory')) {
+          const emailSentHistoryStore = db.createObjectStore('emailSentHistory', { keyPath: 'localId', autoIncrement: true });
+          emailSentHistoryStore.createIndex('emailQueueId', 'emailQueueId', { unique: false });
+          emailSentHistoryStore.createIndex('messageId', 'messageId', { unique: false });
+          emailSentHistoryStore.createIndex('sentAt', 'sentAt', { unique: false });
+          emailSentHistoryStore.createIndex('deliveryStatus', 'deliveryStatus', { unique: false });
+          emailSentHistoryStore.createIndex('leadId', 'leadId', { unique: false });
+          emailSentHistoryStore.createIndex('contactId', 'contactId', { unique: false });
+          emailSentHistoryStore.createIndex('serverId', 'serverId', { unique: true });
+        }
       };
     });
   }
@@ -277,6 +331,108 @@ class IndexedDBService {
       lastSyncTime: localStorage.getItem('lastSyncTime') ? 
         parseInt(localStorage.getItem('lastSyncTime')!) : undefined
     };
+  }
+
+  /**
+   * Email & Calendar specific methods
+   */
+
+  // Email Queue methods
+  async addToEmailQueue(emailData: any): Promise<number> {
+    const queueItem = {
+      ...emailData,
+      status: 'queued',
+      retryCount: 0,
+      maxRetries: 3,
+      priority: emailData.priority || 'normal',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    return this.add('emailQueue', queueItem);
+  }
+
+  async getQueuedEmails(): Promise<any[]> {
+    return this.getByIndex('emailQueue', 'status', 'queued');
+  }
+
+  async updateEmailQueueStatus(localId: number, status: string, error?: string): Promise<void> {
+    const item = await this.get<any>('emailQueue', localId);
+    if (item) {
+      const updates: any = {
+        ...item,
+        status,
+        lastAttempt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      if (error) {
+        updates.error = error;
+        updates.retryCount = (item.retryCount || 0) + 1;
+      }
+      if (status === 'sent') {
+        updates.sentAt = new Date().toISOString();
+      }
+      await this.update('emailQueue', updates);
+    }
+  }
+
+  // Calendar methods
+  async getUpcomingEvents(startDate: string, endDate: string): Promise<any[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['calendarEvents'], 'readonly');
+      const store = transaction.objectStore('calendarEvents');
+      const index = store.index('startTime');
+      const range = IDBKeyRange.bound(startDate, endDate);
+      const request = index.getAll(range);
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getEventsByEntity(entityType: 'lead' | 'contact' | 'opportunity', entityId: string): Promise<any[]> {
+    const indexName = `${entityType}Id`;
+    return this.getByIndex('calendarEvents', indexName, entityId);
+  }
+
+  // Email account methods
+  async getActiveEmailAccounts(): Promise<any[]> {
+    return this.getByIndex('emailAccounts', 'isActive', true);
+  }
+
+  async getEmailAccountByProvider(provider: string): Promise<any[]> {
+    return this.getByIndex('emailAccounts', 'provider', provider);
+  }
+
+  // Email template methods
+  async getActiveEmailTemplates(): Promise<any[]> {
+    return this.getByIndex('emailTemplates', 'isActive', true);
+  }
+
+  async getEmailTemplatesByCategory(category: string): Promise<any[]> {
+    return this.getByIndex('emailTemplates', 'category', category);
+  }
+
+  // Email history methods
+  async getEmailHistoryByEntity(entityType: 'lead' | 'contact' | 'opportunity', entityId: string): Promise<any[]> {
+    const indexName = `${entityType}Id`;
+    return this.getByIndex('emailSentHistory', indexName, entityId);
+  }
+
+  async getEmailHistoryByDate(startDate: string, endDate: string): Promise<any[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['emailSentHistory'], 'readonly');
+      const store = transaction.objectStore('emailSentHistory');
+      const index = store.index('sentAt');
+      const range = IDBKeyRange.bound(startDate, endDate);
+      const request = index.getAll(range);
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
   }
 }
 

@@ -311,6 +311,145 @@ export interface AuthResponse {
   expiresAt: string;
 }
 
+// Email & Calendar Integration Types
+export interface EmailAccount {
+  id?: number;
+  localId?: number;
+  serverId?: string;
+  provider: 'gmail' | 'outlook';
+  email: string;
+  displayName: string;
+  encryptedTokens: string; // Encrypted OAuth tokens
+  refreshToken?: string;
+  expiresAt?: string;
+  isActive: boolean;
+  lastSyncTime?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmailTemplate {
+  id?: number;
+  localId?: number;
+  serverId?: string;
+  name: string;
+  subject: string;
+  htmlContent: string;
+  textContent?: string;
+  variables: string[]; // Array of variable names like ['firstName', 'company']
+  category?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmailQueueItem {
+  id?: number;
+  localId?: number;
+  serverId?: string;
+  fromEmailAccountId: number;
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  htmlContent: string;
+  textContent?: string;
+  attachments?: EmailAttachment[];
+  scheduledSendTime?: string;
+  priority: 'low' | 'normal' | 'high';
+  status: 'draft' | 'queued' | 'sending' | 'sent' | 'failed';
+  retryCount: number;
+  maxRetries: number;
+  lastAttempt?: string;
+  sentAt?: string;
+  error?: string;
+  leadId?: string;
+  contactId?: string;
+  opportunityId?: string;
+  templateId?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmailAttachment {
+  name: string;
+  mimeType: string;
+  size: number;
+  data: string; // Base64 encoded file data
+}
+
+export interface CalendarEvent {
+  id?: number;
+  localId?: number;
+  serverId?: string;
+  title: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  timezone?: string;
+  location?: string;
+  attendees: CalendarAttendee[];
+  organizer?: CalendarAttendee;
+  isAllDay: boolean;
+  recurrence?: RecurrenceRule;
+  status: 'tentative' | 'confirmed' | 'cancelled';
+  visibility: 'public' | 'private';
+  emailAccountId?: number;
+  leadId?: string;
+  contactId?: string;
+  opportunityId?: string;
+  meetingLink?: string;
+  reminderMinutes?: number[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CalendarAttendee {
+  email: string;
+  name?: string;
+  status: 'needsAction' | 'accepted' | 'declined' | 'tentative';
+  isOptional: boolean;
+}
+
+export interface RecurrenceRule {
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  interval: number;
+  endDate?: string;
+  count?: number;
+  byDay?: string[]; // ['MO', 'TU', 'WE', 'TH', 'FR']
+  byMonth?: number[];
+  byMonthDay?: number[];
+}
+
+export interface EmailSentHistory {
+  id?: number;
+  localId?: number;
+  serverId?: string;
+  emailQueueId: number;
+  messageId: string; // Email provider's message ID
+  fromEmail: string;
+  toEmails: string[];
+  subject: string;
+  sentAt: string;
+  deliveryStatus: 'sent' | 'delivered' | 'bounced' | 'failed';
+  trackingData?: EmailTrackingData;
+  leadId?: string;
+  contactId?: string;
+  opportunityId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmailTrackingData {
+  opened?: boolean;
+  openedAt?: string;
+  clickedLinks?: string[];
+  clickedAt?: string[];
+  bounceReason?: string;
+  unsubscribed?: boolean;
+  unsubscribedAt?: string;
+}
+
 // Real-time update types
 export interface RealtimeUpdate {
   type: 'LEAD_UPDATED' | 'CONTACT_UPDATED' | 'OPPORTUNITY_UPDATED' | 'ACTIVITY_CREATED' | 'NOTIFICATION';
