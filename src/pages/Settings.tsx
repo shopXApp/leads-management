@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import EmailIntegration from '@/components/settings/EmailIntegration';
 
 const Settings = () => {
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -161,50 +162,7 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Workflow className="h-5 w-5" />
-                <span>Integrations</span>
-              </CardTitle>
-              <CardDescription>
-                Connect your CRM with third-party services
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Mail className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium">Email Service</h4>
-                        <p className="text-sm text-muted-foreground">Connect SMTP provider</p>
-                      </div>
-                      <Button variant="outline" size="sm">Connect</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                        <Database className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium">Data Backup</h4>
-                        <p className="text-sm text-muted-foreground">Automated backups</p>
-                      </div>
-                      <Button variant="outline" size="sm">Configure</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
+          <EmailIntegration />
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-4">
